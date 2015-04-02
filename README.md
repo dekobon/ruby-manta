@@ -200,6 +200,8 @@ by Manta. Manta also supports temporary signed URLs that allow unauthenticated
 individuals to operate on private objects, until the link expires. See
 gen_signed_url() below for the details.
 
+Note: Signed URLs from the root path can't be created by subusers. 
+
 
 
 Map/Reduce Jobs
@@ -475,6 +477,8 @@ Examples:
     _, headers = client.list_directory('/john/stor/plans-world-domination',
                                        :head => true)
 `````
+
+Note: Subusers can't list the root directory path.
 
 
 

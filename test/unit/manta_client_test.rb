@@ -97,62 +97,62 @@ class TestMantaClient < Minitest::Test
 
   def test_directories
     result, headers = @@client.put_directory(@@test_dir_path)
-    assert_equal result, true
+    assert_equal true, result
     assert headers.is_a? Hash
 
     result, headers = @@client.put_directory(@@test_dir_path + '/dir1')
-    assert_equal result, true
+    assert_equal true, result
     assert headers.is_a? Hash
 
     # since idempotent
     result, headers = @@client.put_directory(@@test_dir_path + '/dir1')
-    assert_equal result, true
+    assert_equal true, result
     assert headers.is_a? Hash
 
     result, headers = @@client.put_object(@@test_dir_path + '/obj1', 'obj1-data')
-    assert_equal result, true
+    assert_equal true, result
     assert headers.is_a? Hash
 
     result, headers = @@client.put_object(@@test_dir_path + '/obj2', 'obj2-data')
-    assert_equal result, true
+    assert_equal true, result
     assert headers.is_a? Hash
 
     result, headers = @@client.list_directory(@@test_dir_path)
     assert headers.is_a? Hash
-    assert_equal result.size, 3
+    assert_equal 3, result.size
 
-    assert_equal result[0]['name'], 'dir1'
-    assert_equal result[0]['type'], 'directory'
+    assert_equal 'dir1', result[0]['name']
+    assert_equal 'directory', result[0]['type']
     assert result[0]['mtime'].match(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/)
 
-    assert_equal result[1]['name'], 'obj1'
-    assert_equal result[1]['type'], 'object'
-    assert_equal result[1]['size'], 9
+    assert_equal 'obj1', result[1]['name']
+    assert_equal 'object', result[1]['type']
+    assert_equal 9, result[1]['size']
     assert result[1]['mtime'].match(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/)
 
-    assert_equal result[2]['name'], 'obj2'
-    assert_equal result[2]['type'], 'object'
-    assert_equal result[2]['size'], 9
+    assert_equal 'obj2', result[2]['name']
+    assert_equal 'object', result[2]['type']
+    assert_equal 9, result[2]['size']
     assert result[2]['mtime'].match(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/)
 
     result, _ = @@client.list_directory(@@test_dir_path, :limit => 2)
-    assert_equal result.size, 2
-    assert_equal result[0]['name'], 'dir1'
-    assert_equal result[1]['name'], 'obj1'
+    assert_equal 2, result.size
+    assert_equal 'dir1', result[0]['name']
+    assert_equal 'obj1', result[1]['name']
 
     result, _ = @@client.list_directory(@@test_dir_path, :limit => 1)
-    assert_equal result.size, 1
-    assert_equal result[0]['name'], 'dir1'
+    assert_equal 1, result.size
+    assert_equal 'dir1', result[0]['name']
 
     result, _ = @@client.list_directory(@@test_dir_path, :limit  => 2,
                                                        :marker => 'obj1')
     assert_equal result.size, 2
-    assert_equal result[0]['name'], 'obj1'
-    assert_equal result[1]['name'], 'obj2'
+    assert_equal 'obj1', result[0]['name']
+    assert_equal 'obj2', result[1]['name']
 
     result, headers = @@client.list_directory(@@test_dir_path, :head => true)
-    assert_equal result, true
-    assert_equal headers['Result-Set-Size'], '3'
+    assert_equal true,  result
+    assert_equal '3', headers['Result-Set-Size']
 
     begin
       @@client.delete_directory(@@test_dir_path)
@@ -318,6 +318,7 @@ class TestMantaClient < Minitest::Test
     put_url = @@client.gen_signed_url(Time.now + 500000, [:put, :options],
                                       @@test_dir_path + '/obj1')
 
+    # Subusers can't PUT to this path
     result = client.options("https://" + put_url, {
       'Access-Control-Request-Headers' => 'access-control-allow-origin, accept, content-type',
       'Access-Control-Request-Method' => 'PUT'
@@ -383,7 +384,15 @@ class TestMantaClient < Minitest::Test
       skip 'Usage directory has not been created yet'
     end
 
-    result, headers = @@client.list_directory('/%s/reports/usage' % @@user)
+    begin
+      result, headers = @@client.list_directory('/%s/reports/usage' % @@user)
+    rescue => e
+      if ENV.key?('MANTA_SUBUSER') &&
+          e.message.include?('None of your active roles are present on the resource')
+        skip("Subusers typically don't have access to the reports directory")
+      end
+    end
+
     assert headers.is_a? Hash
     assert result.is_a? Array
     assert result.length > 0
@@ -559,7 +568,7 @@ class TestMantaClient < Minitest::Test
     result, headers = @@client.list_jobs(:running)
 
     unless result.empty?
-      skip "We can't run a job test if we have jobs running because it becomes " +
+      skip "We can't run a test job if we have jobs running because it becomes " +
            'a difficult coordination problem.'
     end
 
